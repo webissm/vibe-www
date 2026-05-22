@@ -162,6 +162,7 @@ function actualBarStateClass(t){
 function buildBody(){
   TASKS.forEach((t, idx) => {
     const tr = document.createElement("tr");
+    tr.dataset.idx = idx;
     const ps = parseDate(t.ps), pe = parseDate(t.pe);
     const as = parseDate(t.as), ae = parseDate(t.ae);
     const pClass = progressClass(t);
@@ -364,7 +365,6 @@ const modal = document.getElementById("modalBack");
 const form = document.getElementById("applyForm");
 function openModal(){ modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); setTimeout(()=>form.querySelector("input").focus(), 100); }
 function closeModal(){ modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }
-document.getElementById("applyBtnTop").addEventListener("click", openModal);
 document.getElementById("applyBtnMobile").addEventListener("click", openModal);
 document.getElementById("reportBtn").addEventListener("click", openModal);
 document.getElementById("modalCancel").addEventListener("click", closeModal);
@@ -388,6 +388,68 @@ form.addEventListener("submit", e => {
   );
   window.location.href = `mailto:smjcreate@naver.com?subject=${subject}&body=${body}`;
   closeModal();
+});
+
+/* ──────────────────────────────────────────────────────────
+ * Filter buttons + Search
+ * ────────────────────────────────────────────────────────── */
+let currentFilter = "all";
+let currentQuery  = "";
+
+function matchesFilter(t, filter) {
+  const pe = parseDate(t.pe);
+  switch (filter) {
+    case "active": return t.unit < 100;
+    case "delay":  return pe && pe < TODAY && t.unit < 100;
+    case "done":   return t.unit >= 100;
+    default:       return true;
+  }
+}
+
+function matchesSearch(t, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    t.feature.toLowerCase().includes(q) ||
+    t.owner.toLowerCase().includes(q)   ||
+    t.out.toLowerCase().includes(q)
+  );
+}
+
+function applyFilters() {
+  body.querySelectorAll("tr").forEach(tr => {
+    const t = TASKS[+tr.dataset.idx];
+    const visible = matchesFilter(t, currentFilter) && matchesSearch(t, currentQuery);
+    tr.style.display = visible ? "" : "none";
+  });
+}
+
+document.querySelectorAll(".seg [data-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".seg [data-filter]").forEach(b => {
+      b.classList.remove("on");
+      b.setAttribute("aria-selected", "false");
+    });
+    btn.classList.add("on");
+    btn.setAttribute("aria-selected", "true");
+    currentFilter = btn.dataset.filter;
+    if (!searchInput.value.trim()) currentQuery = "";
+    applyFilters();
+  });
+});
+
+const searchInput = document.querySelector(".search");
+searchInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    currentQuery = searchInput.value.trim();
+    applyFilters();
+  }
+});
+searchInput.addEventListener("search", () => {
+  if (searchInput.value === "") {
+    currentQuery = "";
+    applyFilters();
+  }
 });
 
 /* ──────────────────────────────────────────────────────────
